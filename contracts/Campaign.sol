@@ -20,6 +20,7 @@ contract Campaign {
     uint public minimumContribution;
     address public tokenAddress;
     string public title;
+    string public subtitle;
     string public description;
     string public image;
     SToken sToken;
@@ -29,10 +30,11 @@ contract Campaign {
         _;
     }
 
-    constructor(uint minimum, address creator, string memory t, string memory i, string memory d, uint tokenMaxSupply,string memory tokenName, string memory tokenSymbol) public {
+    constructor(uint minimum, address creator, string memory t, string memory st, string memory i, string memory d, uint tokenMaxSupply,string memory tokenName, string memory tokenSymbol) public {
         manager = creator;
         minimumContribution = minimum;
         title = t;
+        subtitle = st;
         image = i;
         description = d;
         requestsCount = 0;
@@ -85,7 +87,7 @@ contract Campaign {
 
     }
 
-    function getSummary() public view returns(uint, uint, uint, address, string memory, string memory, string memory){
+    function getSummary() public view returns(uint, uint, uint, address, string memory, string memory, string memory, string memory){
         return(
             minimumContribution,
             address(this).balance,
@@ -93,7 +95,8 @@ contract Campaign {
             manager,
             title,
             description,
-            image
+            image,
+            subtitle
         );
     }
 

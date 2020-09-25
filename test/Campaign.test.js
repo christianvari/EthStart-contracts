@@ -12,10 +12,12 @@ contract("Unit tests", (accounts) => {
         await factory.createCampaign(
             1e15,
             "titolo prova",
+            "sottotitolo",
+            "immagine bellissima",
             "descrizione figa",
             1e10,
             "Prova",
-            "PROV"
+            "PROV",
         );
         let [campaignAddress] = await factory.getDeployedCampaigns();
         campaign = await Campaign.at(campaignAddress);
@@ -62,7 +64,7 @@ contract("Unit tests", (accounts) => {
             accounts[1],
             {
                 from: accounts[0],
-            }
+            },
         );
 
         const request = await campaign.requests(0);
@@ -72,9 +74,7 @@ contract("Unit tests", (accounts) => {
 
     it("processes request", async () => {
         let initialBalance = await web3.eth.getBalance(accounts[1]);
-        initialBalance = parseFloat(
-            web3.utils.fromWei(initialBalance, "ether")
-        );
+        initialBalance = parseFloat(web3.utils.fromWei(initialBalance, "ether"));
         console.log("Initial balance " + initialBalance);
 
         await campaign.contribute({
@@ -82,14 +82,9 @@ contract("Unit tests", (accounts) => {
             value: web3.utils.toWei("2", "ether"),
         });
 
-        await campaign.createRequest(
-            "A",
-            web3.utils.toWei("1", "ether"),
-            accounts[1],
-            {
-                from: accounts[0],
-            }
-        );
+        await campaign.createRequest("A", web3.utils.toWei("1", "ether"), accounts[1], {
+            from: accounts[0],
+        });
 
         await campaign.approveRequest(0, { from: accounts[0] });
         await campaign.finalizeRequest(0, { from: accounts[0] });

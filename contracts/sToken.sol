@@ -7,6 +7,7 @@ contract SToken is ERC20Capped {
 
     address public campaignAddress;
     uint public minimumBuy;
+    uint public maxSupplyToken;
 
     modifier restricted(){
         assert(msg.sender == campaignAddress);
@@ -16,7 +17,8 @@ contract SToken is ERC20Capped {
     constructor(address owner, uint256 maxSupply, string memory name, string memory symbol, uint minBuy ) public ERC20(name, symbol) ERC20Capped(maxSupply) {
         _mint(owner, maxSupply/4);
         campaignAddress = msg.sender;
-        minimumBuy= minBuy;
+        minimumBuy = minBuy;
+        maxSupplyToken = maxSupply;
     }
 
     function getTokenQuantity(uint256 depositedAmount, string memory symbol ) internal view returns(uint){
@@ -29,6 +31,15 @@ contract SToken is ERC20Capped {
 
         uint256 amount = getTokenQuantity(depositedAmount, symbol);
         _mint(sender, amount);
+    }
+
+    function getSummary() public view returns(uint, uint, string memory, string memory){
+        return(
+            totalSupply(),
+            maxSupplyToken,
+            name(),
+            symbol()
+        );
     }
     
 }
