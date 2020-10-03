@@ -1,106 +1,143 @@
 // SPDX-License-Identifier: GPLv3
 pragma solidity ^0.6.0;
-import {SToken} from "./sToken.sol";
-
+import {SToken} from "./SToken.sol";
+import {SGovernance} from "./SGovernance.sol";
+import '@openzeppelin/contracts/math/SafeMath.sol';
 
 contract Campaign {
 
-    struct Request {
-        string description;
-        uint value;
-        address payable recipient;
-        bool complete;
-        uint approvalsCount;
-        mapping(address=>bool) approvals;
+    using SafeMath for uint;
+
+    struct Details {
+        string[5] info; //[title, description, imageURL, tokenName, tokenSymbol]
+        uint tokenPrice;
+        uint tokenMaxSupply;
+        address manager;
     }
 
-    Request[] public requests;
-    uint public requestsCount;
-    address public manager;
-    uint public minimumContribution;
+    struct Funding {
+        address[] contributersAddresses;
+        mapping(address=>uint) contributersFunds;
+        uint tokensAvailibility;
+        uint timeout;
+        bool isCampaignFunded;
+    }
+
+    Details public details;
+    Funding public funding;
+
     address public tokenAddress;
-    string public title;
-    string public subtitle;
-    string public description;
-    string public image;
     SToken sToken;
 
+    address public governanceAddress;
+    SGovernance sGovernance;
+
     modifier restricted(){
-        assert(msg.sender == manager);
+        assert(msg.sender == details.manager);
+        _;
+    }
+    modifier beforeTimeout(){
+        assert(block.timestamp <= funding.timeout);
+        _;
+    }
+    modifier afterTimeout(){
+        assert(block.timestamp > funding.timeout);
+        _;
+    }
+    modifier isCampaignFundedModifier(){
+        assert(funding.isCampaignFunded);
         _;
     }
 
-    constructor(uint minimum, address creator, string memory t, string memory st, string memory i, string memory d, uint tokenMaxSupply,string memory tokenName, string memory tokenSymbol) public {
-        manager = creator;
-        minimumContribution = minimum;
-        title = t;
-        subtitle = st;
-        image = i;
-        description = d;
-        requestsCount = 0;
-        sToken = new SToken(creator, tokenMaxSupply, tokenName, tokenSymbol, minimum);
+    constructor(uint tokenPrice, address m, string memory title, string memory imageURL, string memory description, uint tokenMaxSupply,string memory tokenName, string memory tokenSymbol, uint t) public {
+        details = Details({
+            info: [title, description, imageURL,tokenName,tokenSymbol],
+            tokenPrice:tokenPrice,
+            tokenMaxSupply:tokenMaxSupply,
+            manager:m
+        });
+
+        funding.timeout = block.timestamp.add(t);
+        funding.isCampaignFunded = false;
+        funding.tokensAvailibility = tokenMaxSupply.sub(tokenMaxSupply.div(4));
+    }
+
+    function contribute() public payable beforeTimeout {
+        require(msg.value > 0);
+        require(funding.tokensAvailibility.mul(details.tokenPrice) >= msg.value, "Not enough tokens disponible");
+        uint depositedAmount = funding.contributersFunds[msg.sender];
+        if(depositedAmount == 0)
+            funding.contributersAddresses.push(msg.sender);
+        funding.contributersFunds[msg.sender] = funding.contributersFunds[msg.sender].add(msg.value);
+        funding.tokensAvailibility = funding.tokensAvailibility.sub(msg.value.div(details.tokenPrice));
+    }
+
+    function balanceOf() public view returns(uint){
+        if(block.timestamp <= funding.timeout && !funding.isCampaignFunded)
+            return funding.contributersFunds[msg.sender];
+        else
+            return sToken.balanceOf(msg.sender);
+    }
+
+    function finalizeCrowdfunding() public restricted afterTimeout {
+        require(funding.tokensAvailibility == 0);
+        sToken = new SToken(details.manager, details.tokenMaxSupply, details.info[3], details.info[4], details.tokenPrice);
         tokenAddress = address(sToken);
-    }
-
-    function contribute() public payable {
-        require(msg.value > minimumContribution, "The minimum contribution is not satisfied");
-        sToken.sendTokens(msg.value,"ETH",msg.sender);
-    }
-
-    function isContributor() public view returns(bool) {
-        return sToken.balanceOf(msg.sender) > 0;
-    }
-
-    function createRequest(string memory desc, uint value, address payable recipient) public restricted{
-        Request memory newRequest = Request(
-            {description:desc,
-            value:value,
-            recipient:recipient,
-            complete:false,
-            approvalsCount:0}
-        );
-
-        requests.push(newRequest);
-        requestsCount++;
-    }
-
-    function approveRequest(uint id) public {
-        require(sToken.balanceOf(msg.sender) > 0, "You have to contribute");
-
-        Request storage req = requests[id];
-
-        require(! req.approvals[msg.sender], "You can approve only one time");
-
-        req.approvals[msg.sender] = true;
-        req.approvalsCount += sToken.balanceOf(msg.sender);
-    }
-
-    function finalizeRequest(uint id) public restricted{
-
-        Request storage req = requests[id];
-
-        require(! req.complete, "Request altredy completed");
-        require(req.approvalsCount > (sToken.totalSupply() / 2), "Not enough approvers");
-
-        req.recipient.transfer(req.value);
-        req.complete = true;
+        sGovernance = new SGovernance();
+        governanceAddress = address(sGovernance);
+        sToken.sendTokens(details.tokenMaxSupply.div(4), msg.sender);
+        funding.isCampaignFunded = true;
 
     }
+    function redeem() public afterTimeout {
+        if(funding.isCampaignFunded){
+            uint depositedAmount = funding.contributersFunds[msg.sender];
+            require(depositedAmount>0);
+            sToken.sendTokens(depositedAmount, msg.sender);
+        } else {
+            uint depositedAmount = funding.contributersFunds[msg.sender];
+            msg.sender.transfer(depositedAmount);
+            funding.contributersFunds[msg.sender] = 0;
+        }
+    }
 
-    function getSummary() public view returns(uint, uint, uint, address, string memory, string memory, string memory, string memory){
+    function createRequest(string memory t, string memory desc, uint value, address payable recipient, uint time) public afterTimeout isCampaignFundedModifier {
+        require(sToken.balanceOf(msg.sender) > sToken.totalSupply().div(10));
+        sGovernance.createRequest(msg.sender, t, desc, value, recipient, time);
+    }
+
+    function approveRequest(uint requestId) public afterTimeout isCampaignFundedModifier {
+        uint balance = sToken.balanceOf(msg.sender);
+        require( balance > 0);
+
+        sGovernance.approveRequest(requestId, msg.sender, balance);
+    }
+
+    function finalizeRequest(uint id) public afterTimeout isCampaignFundedModifier{
+
+        sGovernance.finalizeRequest(id, sToken.totalSupply());
+        (bool isApproved, address payable recipient, uint value) = sGovernance.getRequestStatus(id);
+        if(isApproved)
+            recipient.transfer(value);
+    }
+
+    function getCampaignSummary() public view returns(uint, uint, address, string memory, string memory, string memory, bool){
         return(
-            minimumContribution,
+            details.tokenPrice,
             address(this).balance,
-            requests.length,
-            manager,
-            title,
-            description,
-            image,
-            subtitle
+            details.manager,
+            details.info[0],
+            details.info[1],
+            details.info[2],
+            funding.isCampaignFunded
         );
     }
 
-    function getRequestsCount() public view returns(uint){
-        return requests.length;
+    function getFundingSummary() public view returns(uint, uint, address[] memory){
+        return (
+            funding.tokensAvailibility, 
+            funding.timeout, 
+            funding.contributersAddresses
+        );
     }
 }

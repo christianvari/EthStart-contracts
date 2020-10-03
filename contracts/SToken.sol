@@ -21,15 +21,14 @@ contract SToken is ERC20Capped {
         maxSupplyToken = maxSupply;
     }
 
-    function getTokenQuantity(uint256 depositedAmount, string memory symbol ) internal view returns(uint){
-        // uint256 price = 400;  //openFeedOracle.price(symbol);
+    function getTokenQuantity(uint256 depositedAmount) internal view returns(uint){
         return depositedAmount/minimumBuy;
     }
 
-    function sendTokens(uint256 depositedAmount, string memory symbol, address sender) public restricted{
-        require(depositedAmount > minimumBuy, "The minimum contribution is not satisfied");
+    function sendTokens(uint256 depositedAmount, address sender) public restricted{
+        // require(depositedAmount > minimumBuy, "The minimum contribution is not satisfied");
 
-        uint256 amount = getTokenQuantity(depositedAmount, symbol);
+        uint256 amount = getTokenQuantity(depositedAmount);
         _mint(sender, amount);
     }
 

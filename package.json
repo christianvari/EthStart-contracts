@@ -16,7 +16,7 @@
         "migrate": "npx truffle migrate --network ropsten",
         "runTest": "npx truffle test",
         "ganache": "npx ganache-cli",
-        "test": "npm run ganache & sleep 1m; npm run runTest"
+        "test": "npm run compile && npm run ganache & sleep 1m; npm run runTest"
     },
     "repository": {
         "type": "git",
