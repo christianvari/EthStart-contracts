@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: GPLv3
 pragma solidity ^0.6.0;
+import '@openzeppelin/contracts/math/SafeMath.sol';
 
 contract SGovernance {
+
+    using SafeMath for uint;
 
     struct Request {
         address creator;
@@ -32,17 +35,18 @@ contract SGovernance {
         Request memory newRequest = Request(
             {creator: c,
             info:[t,desc],
-            uintArray:[value, 0 , block.timestamp + time],
+            uintArray:[value, 0 , block.timestamp.add(time)],
             recipient:recipient,
             status:[false, false]
             }
         );
 
         requests.push(newRequest);
-        requestsCount++;
+        requestsCount = requestsCount.add(1);
     }
 
     function approveRequest(uint id, address user, uint balance) public restricted{
+        assert(id < requestsCount);
         Request storage req = requests[id];
 
         require(!req.status[0], "Request altredy completed");
@@ -50,7 +54,7 @@ contract SGovernance {
         require(!req.approvals[user], "You can approve only one time");
 
         req.approvals[user] = true;
-        req.uintArray[1] += balance;
+        req.uintArray[1] = req.uintArray[1].add(balance);
     }
 
     function finalizeRequest(uint id, uint totalSupply) public restricted{
@@ -59,7 +63,7 @@ contract SGovernance {
         require(!req.status[0], "Request altredy completed");
         require(block.timestamp > req.uintArray[2], "Timeout is not ended");
 
-        req.status[1] = req.uintArray[1] > (totalSupply / 2);
+        req.status[1] = req.uintArray[1] > (totalSupply.div(2));
         req.status[0] = true;
     }
 

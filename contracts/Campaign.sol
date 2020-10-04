@@ -81,7 +81,7 @@ contract Campaign {
 
     function finalizeCrowdfunding() public restricted afterTimeout {
         require(funding.tokensAvailibility == 0);
-        sToken = new SToken(details.manager, details.tokenMaxSupply, details.info[3], details.info[4], details.tokenPrice);
+        sToken = new SToken(details.tokenMaxSupply, details.info[3], details.info[4]);
         tokenAddress = address(sToken);
         sGovernance = new SGovernance();
         governanceAddress = address(sGovernance);
@@ -93,7 +93,7 @@ contract Campaign {
         if(funding.isCampaignFunded){
             uint depositedAmount = funding.contributersFunds[msg.sender];
             require(depositedAmount>0);
-            sToken.sendTokens(depositedAmount, msg.sender);
+            sToken.sendTokens(depositedAmount.div(details.tokenPrice), msg.sender);
         } else {
             uint depositedAmount = funding.contributersFunds[msg.sender];
             msg.sender.transfer(depositedAmount);
@@ -102,13 +102,13 @@ contract Campaign {
     }
 
     function createRequest(string memory t, string memory desc, uint value, address payable recipient, uint time) public afterTimeout isCampaignFundedModifier {
-        require(sToken.balanceOf(msg.sender) > sToken.totalSupply().div(10));
+        require(sToken.balanceOf(msg.sender) > details.tokenMaxSupply.div(10));
         sGovernance.createRequest(msg.sender, t, desc, value, recipient, time);
     }
 
     function approveRequest(uint requestId) public afterTimeout isCampaignFundedModifier {
         uint balance = sToken.balanceOf(msg.sender);
-        require( balance > 0);
+        require( balance > 0, "You havent tokens");
 
         sGovernance.approveRequest(requestId, msg.sender, balance);
     }

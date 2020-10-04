@@ -77,6 +77,11 @@ contract("Unit tests", (accounts) => {
         assert(isFunded);
     });
 
+    it("redeem tokens", async () => {
+        await campaign.redeem({ from: accounts[1] });
+        await campaign.redeem({ from: accounts[2] });
+    });
+
     it("make a request", async () => {
         await campaign.createRequest(
             "Buy batteries",
@@ -87,27 +92,12 @@ contract("Unit tests", (accounts) => {
         );
     });
 
-    // it("processes request", async () => {
-    //     let initialBalance = await web3.eth.getBalance(accounts[1]);
-    //     initialBalance = parseFloat(web3.utils.fromWei(initialBalance, "ether"));
-    //     console.log("Initial balance " + initialBalance);
+    it("vote request", async () => {
+        await campaign.approveRequest(0, { from: accounts[2] });
+    });
 
-    //     await campaign.contribute({
-    //         from: accounts[0],
-    //         value: web3.utils.toWei("2", "ether"),
-    //     });
-
-    //     await campaign.createRequest("A", web3.utils.toWei("1", "ether"), accounts[1], {
-    //         from: accounts[0],
-    //     });
-
-    //     await campaign.approveRequest(0, { from: accounts[0] });
-    //     await campaign.finalizeRequest(0, { from: accounts[0] });
-
-    //     let balance = await web3.eth.getBalance(accounts[1]);
-    //     balance = parseFloat(web3.utils.fromWei(balance, "ether"));
-
-    //     console.log("Final balance " + balance);
-    //     assert(balance > initialBalance);
-    // });
+    it("finalize request", async () => {
+        await new Promise((r) => setTimeout(r, 6000));
+        await campaign.finalizeRequest(0, { from: accounts[2] });
+    });
 });

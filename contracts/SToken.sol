@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract SToken is ERC20Capped {
 
     address public campaignAddress;
-    uint public minimumBuy;
     uint public maxSupplyToken;
 
     modifier restricted(){
@@ -14,21 +13,12 @@ contract SToken is ERC20Capped {
         _;
     }
 
-    constructor(address owner, uint256 maxSupply, string memory name, string memory symbol, uint minBuy ) public ERC20(name, symbol) ERC20Capped(maxSupply) {
-        _mint(owner, maxSupply/4);
+    constructor(uint256 maxSupply, string memory name, string memory symbol ) public ERC20(name, symbol) ERC20Capped(maxSupply) {
         campaignAddress = msg.sender;
-        minimumBuy = minBuy;
         maxSupplyToken = maxSupply;
     }
 
-    function getTokenQuantity(uint256 depositedAmount) internal view returns(uint){
-        return depositedAmount/minimumBuy;
-    }
-
-    function sendTokens(uint256 depositedAmount, address sender) public restricted{
-        // require(depositedAmount > minimumBuy, "The minimum contribution is not satisfied");
-
-        uint256 amount = getTokenQuantity(depositedAmount);
+    function sendTokens(uint256 amount, address sender) public restricted{
         _mint(sender, amount);
     }
 
