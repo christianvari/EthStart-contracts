@@ -13,11 +13,11 @@ contract("Unit tests", (accounts) => {
     it("deploys a factory and a campaign", async () => {
         factory = await Factory.new();
         await factory.createCampaign(
-            web3.utils.toWei("0.000001", "ether"),
+            web3.utils.toWei("0.001", "ether"),
             "titolo prova",
             "immagine bellissima",
             "descrizione figa",
-            "10000000",
+            web3.utils.toWei("10000", "ether"),
             "Prova",
             "PROV",
             "10",
@@ -46,12 +46,16 @@ contract("Unit tests", (accounts) => {
         assert.equal(balance, amount);
     });
 
-    it("buy all remaining tonkes", async () => {
-        let summary = await campaign.getFundingSummary();
+    it("check that timer is not elapsed", async () => {
+        const summary = await campaign.getFundingSummary();
         assert(summary[1].gt(new BN(parseInt(Date.now() / 1000))), "timer elapsed");
-        const availableAmount = summary[0].mul(
-            new BN(web3.utils.toWei("0.000001", "ether")),
-        );
+    });
+
+    it("buy all remaining tokens", async () => {
+        let summary = await campaign.getFundingSummary();
+        const availableAmount = summary[0]
+            .mul(new BN(web3.utils.toWei("0.001", "ether")))
+            .div(new BN(web3.utils.toWei("1", "ether")));
 
         await campaign.contribute({
             from: accounts[2],
@@ -59,7 +63,7 @@ contract("Unit tests", (accounts) => {
         });
 
         summary = await campaign.getFundingSummary();
-        assert.equal(summary[0], 0, "tokens not finished");
+        assert.equal(summary[0], 0);
     });
 
     it("wait for timeout", async () => {

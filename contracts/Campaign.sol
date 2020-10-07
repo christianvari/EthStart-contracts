@@ -64,12 +64,12 @@ contract Campaign {
 
     function contribute() public payable beforeTimeout {
         require(msg.value > 0);
-        require(funding.tokensAvailibility.mul(details.tokenPrice) >= msg.value, "Not enough tokens disponible");
+        require(funding.tokensAvailibility >= msg.value.mul(10**18).div(details.tokenPrice), "Not enough tokens disponible");
         uint depositedAmount = funding.contributersFunds[msg.sender];
         if(depositedAmount == 0)
             funding.contributersAddresses.push(msg.sender);
         funding.contributersFunds[msg.sender] = funding.contributersFunds[msg.sender].add(msg.value);
-        funding.tokensAvailibility = funding.tokensAvailibility.sub(msg.value.div(details.tokenPrice));
+        funding.tokensAvailibility = funding.tokensAvailibility.sub(msg.value.mul(10**18).div(details.tokenPrice));
     }
 
     function allocationBalanceOf() public view returns(uint){
@@ -93,7 +93,7 @@ contract Campaign {
         if(funding.isCampaignFunded){
             uint depositedAmount = funding.contributersFunds[msg.sender];
             require(depositedAmount>0);
-            sToken.sendTokens(depositedAmount.div(details.tokenPrice), msg.sender);
+            sToken.sendTokens(depositedAmount.mul(10**18).div(details.tokenPrice), msg.sender);
         } else {
             uint depositedAmount = funding.contributersFunds[msg.sender];
             msg.sender.transfer(depositedAmount);
@@ -122,7 +122,7 @@ contract Campaign {
             recipient.transfer(value);
     }
 
-    function getCampaignSummary() public view returns(uint, uint, address, string memory, string memory, string memory, bool){
+    function getCampaignSummary() public view returns(uint, uint, address, string memory, string memory, string memory, bool, uint){
         return(
             details.tokenPrice,
             address(this).balance,
@@ -130,7 +130,8 @@ contract Campaign {
             details.info[0],
             details.info[1],
             details.info[2],
-            funding.isCampaignFunded
+            funding.isCampaignFunded,
+            details.tokenMaxSupply
         );
     }
 
@@ -139,8 +140,8 @@ contract Campaign {
             funding.tokensAvailibility, 
             funding.timeout, 
             funding.contributersAddresses,
-            details.info[1],
-            details.info[2]
+            details.info[3],
+            details.info[4]
         );
     }
 }
