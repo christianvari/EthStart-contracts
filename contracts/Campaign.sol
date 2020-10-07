@@ -72,11 +72,11 @@ contract Campaign {
         funding.tokensAvailibility = funding.tokensAvailibility.sub(msg.value.div(details.tokenPrice));
     }
 
-    function balanceOf() public view returns(uint){
-        if(block.timestamp <= funding.timeout && !funding.isCampaignFunded)
-            return funding.contributersFunds[msg.sender];
-        else
-            return sToken.balanceOf(msg.sender);
+    function allocationBalanceOf() public view beforeTimeout returns(uint){
+        return funding.contributersFunds[msg.sender];
+    }
+    function tokensBalanceOf() public view afterTimeout isCampaignFundedModifier returns(uint){
+        return sToken.balanceOf(msg.sender);
     }
 
     function finalizeCrowdfunding() public restricted afterTimeout {
@@ -97,8 +97,9 @@ contract Campaign {
         } else {
             uint depositedAmount = funding.contributersFunds[msg.sender];
             msg.sender.transfer(depositedAmount);
-            funding.contributersFunds[msg.sender] = 0;
         }
+        funding.contributersFunds[msg.sender] = 0;
+
     }
 
     function createRequest(string memory t, string memory desc, uint value, address payable recipient, uint time) public afterTimeout isCampaignFundedModifier {
@@ -133,11 +134,13 @@ contract Campaign {
         );
     }
 
-    function getFundingSummary() public view returns(uint, uint, address[] memory){
+    function getFundingSummary() public view returns(uint, uint, address[] memory, string memory, string memory){
         return (
             funding.tokensAvailibility, 
             funding.timeout, 
-            funding.contributersAddresses
+            funding.contributersAddresses,
+            details.info[1],
+            details.info[2]
         );
     }
 }

@@ -40,7 +40,7 @@ contract("Unit tests", (accounts) => {
             from: accounts[1],
             value: amount,
         });
-        const balance = await campaign.balanceOf({
+        const balance = await campaign.allocationBalanceOf({
             from: accounts[1],
         });
         assert.equal(balance, amount);
@@ -59,7 +59,7 @@ contract("Unit tests", (accounts) => {
         });
 
         summary = await campaign.getFundingSummary();
-        assert.equal(summary[0], 0, "tokens finished");
+        assert.equal(summary[0], 0, "tokens not finished");
     });
 
     it("wait for timeout", async () => {
