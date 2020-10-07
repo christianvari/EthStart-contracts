@@ -72,7 +72,7 @@ contract Campaign {
         funding.tokensAvailibility = funding.tokensAvailibility.sub(msg.value.div(details.tokenPrice));
     }
 
-    function allocationBalanceOf() public view beforeTimeout returns(uint){
+    function allocationBalanceOf() public view returns(uint){
         return funding.contributersFunds[msg.sender];
     }
     function tokensBalanceOf() public view afterTimeout isCampaignFundedModifier returns(uint){
