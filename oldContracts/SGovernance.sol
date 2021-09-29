@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: GPLv3
-pragma solidity ^0.6.0;
-import '@openzeppelin/contracts/math/SafeMath.sol';
+pragma solidity >=0.8.2 <0.9.0;
 
 contract SGovernance {
-
-    using SafeMath for uint;
 
     struct Request {
         address creator;
@@ -25,7 +22,7 @@ contract SGovernance {
         _;
     }
 
-    constructor() public {
+    constructor() {
 
         campaign = msg.sender;
         requestsCount = 0;
@@ -35,14 +32,14 @@ contract SGovernance {
         Request memory newRequest = Request(
             {creator: c,
             info:[t,desc],
-            uintArray:[value, 0 , block.timestamp.add(time)],
+            uintArray:[value, 0 , block.timestamp + time],
             recipient:recipient,
             status:[false, false]
             }
         );
 
         requests.push(newRequest);
-        requestsCount = requestsCount.add(1);
+        requestsCount = requestsCount+1;
     }
 
     function approveRequest(uint id, address user, uint balance) public restricted{
@@ -54,7 +51,7 @@ contract SGovernance {
         require(!req.approvals[user], "You can approve only one time");
 
         req.approvals[user] = true;
-        req.uintArray[1] = req.uintArray[1].add(balance);
+        req.uintArray[1] = req.uintArray[1] + balance;
     }
 
     function finalizeRequest(uint id, uint totalSupply) public restricted{
@@ -63,7 +60,7 @@ contract SGovernance {
         require(!req.status[0], "Request altredy completed");
         require(block.timestamp > req.uintArray[2], "Timeout is not ended");
 
-        req.status[1] = req.uintArray[1] > (totalSupply.div(2));
+        req.status[1] = req.uintArray[1] > (totalSupply/2);
         req.status[0] = true;
     }
 
