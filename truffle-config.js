@@ -58,6 +58,11 @@ module.exports = {
             timeoutBlocks: 200, // # of blocks before a deployment times out  (minimum/default: 50)
             skipDryRun: true, // Skip dry run before migrations? (default: false for public nets )
         },
+        cronos: {
+            provider: new HDWalletProvider(secret.mnemonic, secret.cronos),
+            network_id: "*",
+            skipDryRun: true,
+        },
         // Another network with more advanced options...
         // advanced: {
         // port: 8777,             // Custom port

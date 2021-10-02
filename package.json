@@ -13,7 +13,8 @@
     "devDependencies": {},
     "scripts": {
         "compile": "npx truffle compile",
-        "migrate": "npx truffle migrate --network ropsten",
+        "migrateRopsten": "npx truffle migrate --network ropsten",
+        "migrateCronos": "npx truffle migrate --network cronos",
         "runTest": "npx truffle test",
         "ganache": "npx ganache-cli",
         "test": "npm run compile && npm run ganache & sleep 1m; npm run runTest"
