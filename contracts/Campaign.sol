@@ -4,88 +4,105 @@ import {Token} from "./Token.sol";
 import {StartGovernor} from "./StartGovernor.sol";
 
 contract Campaign {
+    address public initiator;
 
-    struct Details {
-        string[5] info; //[title, description, imageURL, tokenName, tokenSymbol]
-        uint tokenMaxSupply;
-        address manager;
-    }
+    string public title;
+    string public description;
+    string public imageURL;
+    string public tokenName;
+    string public tokenSymbol;
 
-    struct Funding {
-        address[] contributersAddresses;
-        mapping(address=>uint) contributersDeposits;
-        uint endBlock;
-    }
+    uint256 public tokenMaxSupply;
+    address public manager;
+    uint256 public endBlock;
+    bool public isCampaignFunded;
 
-    Details details;
-    Funding funding;
+    address[] contributersAddresses;
+    mapping(address => uint256) contributersDeposits;
 
-    bool isCampaignFunded;
     address public tokenAddress;
     address public governanceAddress;
 
-    modifier restricted(){
-        assert(msg.sender == details.manager);
+    modifier restricted() {
+        assert(msg.sender == initiator);
         _;
     }
-    modifier beforeTimeout(){
-        assert(block.number <= funding.endBlock);
+
+    modifier beforeTimeout() {
+        assert(block.number <= endBlock);
         _;
     }
-    modifier afterTimeout(){
-        assert(block.number > funding.endBlock);
+    modifier afterTimeout() {
+        assert(block.number > endBlock);
         _;
     }
-    modifier isCampaignFundedModifier(){
+    modifier isCampaignFundedModifier() {
         assert(isCampaignFunded);
         _;
     }
 
-    constructor(address m, string memory title, string memory imageURL, string memory description, uint tokenMaxSupply,string memory tokenName, string memory tokenSymbol, uint _endBlock) {
-        assert(tokenMaxSupply > 0);
-        
-        details = Details({
-            info: [title, description, imageURL,tokenName,tokenSymbol],
-            tokenMaxSupply:tokenMaxSupply,
-            manager:m
-        });
+    constructor(
+        address _manager,
+        string memory _title,
+        string memory _imageURL,
+        string memory _description,
+        uint256 _tokenMaxSupply,
+        string memory _tokenName,
+        string memory _tokenSymbol,
+        uint256 _endBlock
+    ) {
+        assert(block.number <= _endBlock && _tokenMaxSupply > 0 );
 
-        funding.endBlock = _endBlock;
+        initiator = msg.sender;
+        title = _title;
+        imageURL = _imageURL;
+        description = _description;
+        tokenMaxSupply = _tokenMaxSupply;
+        tokenName = _tokenName;
+        tokenSymbol = _tokenSymbol;
+        manager = _manager;
+        endBlock = _endBlock;
         isCampaignFunded = false;
     }
 
     function contribute() public payable beforeTimeout {
         require(msg.value > 0);
-        uint depositedAmount = funding.contributersDeposits[msg.sender];
-        if(depositedAmount == 0)
-            funding.contributersAddresses.push(msg.sender);
-        funding.contributersDeposits[msg.sender] = depositedAmount + msg.value;
+        uint256 depositedAmount = contributersDeposits[msg.sender];
+        if (depositedAmount == 0) contributersAddresses.push(msg.sender);
+        contributersDeposits[msg.sender] = depositedAmount + msg.value;
     }
 
-    function contributerBalanceOf(address account) public view returns(uint){
-        return funding.contributersDeposits[account];
+    function contributerBalanceOf(address account)
+        public
+        view
+        returns (uint256)
+    {
+        return contributersDeposits[account];
     }
 
-    function finalizeCrowdfunding() public restricted afterTimeout {
-        Token token = new Token(details.tokenMaxSupply, details.info[3], details.info[4]);
+    function finalizeCrowdfunding() public afterTimeout restricted {
+        Token token = new Token(tokenMaxSupply, tokenName, tokenSymbol);
         tokenAddress = address(token);
-        StartGovernor governor = new StartGovernor(token ,details.info[3]);
+        StartGovernor governor = new StartGovernor(token, title);
         governanceAddress = address(governor);
-        token.sendTokens(details.tokenMaxSupply / 4, msg.sender);
+        token.sendTokens(tokenMaxSupply / 4, manager);
         isCampaignFunded = true;
     }
-    function redeem() public afterTimeout {
-        if(isCampaignFunded){
-            uint depositedAmount = funding.contributersDeposits[msg.sender];
-            require(depositedAmount>0);
-            Token(tokenAddress).sendTokens(depositedAmount / address(this).balance * details.tokenMaxSupply, msg.sender);
-        } else {
-            uint depositedAmount = funding.contributersDeposits[msg.sender];
-            (bool sent,) = msg.sender.call{value: depositedAmount}("");
-            require(sent, "Failed to send Ether");
 
+    function redeem() public afterTimeout {
+        if (isCampaignFunded) {
+            uint256 depositedAmount = contributersDeposits[msg.sender];
+            require(depositedAmount > 0);
+            Token(tokenAddress).sendTokens(
+                (depositedAmount / address(this).balance) * tokenMaxSupply,
+                msg.sender
+            );
+        } else {
+            uint256 depositedAmount = contributersDeposits[msg.sender];
+            (bool sent, ) = msg.sender.call{value: depositedAmount}("");
+            require(sent, "Failed to send Ether");
         }
-        funding.contributersDeposits[msg.sender] = 0;
+        contributersDeposits[msg.sender] = 0;
     }
 
     // function createRequest(string memory t, string memory desc, uint value, address payable recipient, uint time) public afterTimeout isCampaignFundedModifier {
@@ -108,24 +125,45 @@ contract Campaign {
     //         recipient.transfer(value);
     // }
 
-    function getCampaignSummary() public view returns(address, string memory, string memory, string memory, bool, uint){
-        return(
-            details.manager,
-            details.info[0],
-            details.info[1],
-            details.info[2],
-            isCampaignFunded,
-            details.tokenMaxSupply
-        );
-    }
+    // function getCampaignSummary()
+    //     public
+    //     view
+    //     returns (
+    //         address,
+    //         string memory,
+    //         string memory,
+    //         string memory,
+    //         bool,
+    //         uint256
+    //     )
+    // {
+    //     return (
+    //         manager,
+    //         title,
+    //         description,
+    //         imageURL,
+    //         isCampaignFunded,
+    //         tokenMaxSupply
+    //     );
+    // }
 
-    function getFundingSummary() public view returns(uint, uint, address[] memory, string memory, string memory){
-        return (
-            address(this).balance, 
-            funding.endBlock, 
-            funding.contributersAddresses,
-            details.info[3],
-            details.info[4]
-        );
-    }
+    // function getFundingSummary()
+    //     public
+    //     view
+    //     returns (
+    //         uint256,
+    //         uint256,
+    //         address[] memory,
+    //         string memory,
+    //         string memory
+    //     )
+    // {
+    //     return (
+    //         address(this).balance,
+    //         endBlock,
+    //         contributersAddresses,
+    //         tokenName,
+    //         tokenSymbol
+    //     );
+    // }
 }
