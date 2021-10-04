@@ -8,14 +8,14 @@
     },
     "dependencies": {
         "@openzeppelin/contracts": "^4.3.2",
-        "@truffle/hdwallet-provider": "^1.1.0"
+        "@truffle/hdwallet-provider": "^1.1.0",
+        "truffle": "^5.4.13"
     },
-    "devDependencies": {},
     "scripts": {
-        "compile": "npx truffle compile",
-        "migrateRopsten": "npx truffle migrate --network ropsten",
-        "migrateCronos": "npx truffle migrate --network cronos",
-        "runTest": "npx truffle test",
+        "compile": "truffle compile",
+        "migrateRopsten": "truffle migrate --network ropsten",
+        "migrateCronos": "truffle migrate --network cronos",
+        "runTest": "truffle test",
         "ganache": "npx ganache-cli",
         "test": "npm run compile && npm run ganache & sleep 1m; npm run runTest"
     },
