@@ -4,6 +4,7 @@ import {Campaign} from "./Campaign.sol";
 
 contract CampaignFactory {
     address[] public runningCampaigns;
+    mapping(address => uint256) public runningCampaignsIndexer;
     address[] public fundedCampaigns;
 
     function createCampaign(
@@ -28,15 +29,13 @@ contract CampaignFactory {
             )
         );
         runningCampaigns.push(newCampaign);
+        runningCampaignsIndexer[newCampaign] = runningCampaigns.length - 1;
     }
 
-    function finalizeCrowdfunding(address campaignAddress, uint256 index)
-        external
-    {
-        assert(
-            runningCampaigns.length + 1 <= index &&
-                runningCampaigns[index] == campaignAddress
-        );
+    function finalizeCrowdfunding(address campaignAddress) external {
+        uint256 index = runningCampaignsIndexer[campaignAddress];
+        assert(index < runningCampaigns.length);
+
         Campaign c = Campaign(campaignAddress);
         assert(c.manager() == msg.sender && block.number > c.endBlock());
 
