@@ -51,7 +51,7 @@ contract Campaign {
         string memory _tokenSymbol,
         uint256 _endBlock
     ) {
-        assert(block.number <= _endBlock && _tokenMaxSupply > 0 );
+        assert(block.number <= _endBlock && _tokenMaxSupply > 0);
 
         initiator = msg.sender;
         title = _title;
@@ -65,7 +65,7 @@ contract Campaign {
         isCampaignFunded = false;
     }
 
-    function contribute() public payable beforeTimeout {
+    function contribute() external payable beforeTimeout {
         require(msg.value > 0);
         uint256 depositedAmount = contributersDeposits[msg.sender];
         if (depositedAmount == 0) contributersAddresses.push(msg.sender);
@@ -73,36 +73,37 @@ contract Campaign {
     }
 
     function contributerBalanceOf(address account)
-        public
+        external
         view
         returns (uint256)
     {
         return contributersDeposits[account];
     }
 
-    function finalizeCrowdfunding() public afterTimeout restricted {
+    function finalizeCrowdfunding() external restricted {
         Token token = new Token(tokenMaxSupply, tokenName, tokenSymbol);
         tokenAddress = address(token);
         StartGovernor governor = new StartGovernor(token, title);
         governanceAddress = address(governor);
-        token.sendTokens(tokenMaxSupply / 4, manager);
         isCampaignFunded = true;
+        token.sendTokens(tokenMaxSupply / 4, manager);
     }
 
-    function redeem() public afterTimeout {
+    function redeem() external afterTimeout {
         if (isCampaignFunded) {
             uint256 depositedAmount = contributersDeposits[msg.sender];
             require(depositedAmount > 0);
+            contributersDeposits[msg.sender] = 0;
             Token(tokenAddress).sendTokens(
-                (depositedAmount / address(this).balance) * tokenMaxSupply,
+                (depositedAmount * tokenMaxSupply) / address(this).balance,
                 msg.sender
             );
         } else {
             uint256 depositedAmount = contributersDeposits[msg.sender];
+            contributersDeposits[msg.sender] = 0;
             (bool sent, ) = msg.sender.call{value: depositedAmount}("");
-            require(sent, "Failed to send Ether");
+            assert(sent);
         }
-        contributersDeposits[msg.sender] = 0;
     }
 
     // function createRequest(string memory t, string memory desc, uint value, address payable recipient, uint time) public afterTimeout isCampaignFundedModifier {
@@ -123,47 +124,5 @@ contract Campaign {
     //     (bool isApproved, address payable recipient, uint value) = sGovernance.getRequestStatus(id);
     //     if(isApproved)
     //         recipient.transfer(value);
-    // }
-
-    // function getCampaignSummary()
-    //     public
-    //     view
-    //     returns (
-    //         address,
-    //         string memory,
-    //         string memory,
-    //         string memory,
-    //         bool,
-    //         uint256
-    //     )
-    // {
-    //     return (
-    //         manager,
-    //         title,
-    //         description,
-    //         imageURL,
-    //         isCampaignFunded,
-    //         tokenMaxSupply
-    //     );
-    // }
-
-    // function getFundingSummary()
-    //     public
-    //     view
-    //     returns (
-    //         uint256,
-    //         uint256,
-    //         address[] memory,
-    //         string memory,
-    //         string memory
-    //     )
-    // {
-    //     return (
-    //         address(this).balance,
-    //         endBlock,
-    //         contributersAddresses,
-    //         tokenName,
-    //         tokenSymbol
-    //     );
     // }
 }

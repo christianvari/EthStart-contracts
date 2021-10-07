@@ -60,7 +60,7 @@ module.exports = {
         },
         cronos: {
             provider: new HDWalletProvider(secret.mnemonic, secret.cronos),
-            network_id: "*",
+            network_id: "338",
             skipDryRun: true,
         },
         // Another network with more advanced options...

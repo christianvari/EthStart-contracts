@@ -14,7 +14,7 @@ contract CampaignFactory {
         string memory tokenName,
         string memory tokenSymbol,
         uint256 timeout
-    ) public {
+    ) external {
         address newCampaign = address(
             new Campaign(
                 msg.sender,
@@ -31,7 +31,7 @@ contract CampaignFactory {
     }
 
     function finalizeCrowdfunding(address campaignAddress, uint256 index)
-        public
+        external
     {
         assert(
             runningCampaigns.length + 1 <= index &&
@@ -39,17 +39,19 @@ contract CampaignFactory {
         );
         Campaign c = Campaign(campaignAddress);
         assert(c.manager() == msg.sender && block.number > c.endBlock());
-        c.finalizeCrowdfunding();
+
         fundedCampaigns.push(runningCampaigns[index]);
         runningCampaigns[index] = runningCampaigns[runningCampaigns.length - 1];
         runningCampaigns.pop();
+
+        c.finalizeCrowdfunding();
     }
 
-    function getCampaigns(uint256 cursor, uint256 howMany, bool isRunning)
-        public
-        view
-        returns (address[] memory values, uint256 len)
-    {
+    function getCampaigns(
+        uint256 cursor,
+        uint256 howMany,
+        bool isRunning
+    ) external view returns (address[] memory values, uint256 len) {
         uint256 length = howMany;
         address[] memory arr = isRunning ? runningCampaigns : fundedCampaigns;
         if (length > arr.length - cursor) {
@@ -60,6 +62,6 @@ contract CampaignFactory {
             values[i] = arr[cursor + i];
         }
 
-        return (values, arr.length );
+        return (values, arr.length);
     }
 }
