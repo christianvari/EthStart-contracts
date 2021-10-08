@@ -15,9 +15,8 @@
         "compile": "truffle compile",
         "migrateRopsten": "truffle migrate --network ropsten",
         "migrateCronos": "truffle migrate --network cronos",
-        "runTest": "truffle test",
-        "ganache": "npx ganache-cli",
-        "test": "npm run compile && npm run ganache & sleep 1m; npm run runTest"
+        "runTest": "truffle test --stacktrace",
+        "runLocalChain": "truffle develop"
     },
     "repository": {
         "type": "git",

@@ -1,37 +1,43 @@
 const Campaign = artifacts.require("Campaign");
 const Factory = artifacts.require("CampaignFactory");
-const SToken = artifacts.require("SToken");
-const SGovernance = artifacts.require("SGovernance");
+const Token = artifacts.require("Token");
+const StartGovernor = artifacts.require("StartGovernor");
 const BN = require("bn.js");
 
 let factory;
 let campaign;
 let token;
-let governance;
+let governor;
+let campaignAddress;
+const TIMEOUT = 30;
+const timeout = new BN(Date.now() / 1000 + TIMEOUT);
 
 contract("Unit tests", (accounts) => {
     it("deploys a factory and a campaign", async () => {
         factory = await Factory.new();
         await factory.createCampaign(
-            web3.utils.toWei("0.001", "ether"),
             "titolo prova",
             "immagine bellissima",
             "descrizione figa",
             web3.utils.toWei("10000", "ether"),
             "Prova",
             "PROV",
-            "10",
+            timeout,
         );
-        let [campaignAddress] = await factory.getDeployedCampaigns();
-        campaign = await Campaign.at(campaignAddress);
+
+        const res = await factory.getCampaigns(0, 1, true);
+        campaign = await Campaign.at(res.values[0]);
+
+        campaignAddress = campaign.address;
+
+        assert.equal(res.len.toNumber(), 1);
         assert.ok(factory.address);
         assert.ok(campaign.address);
     });
 
     it("marks caller as Campaign manager", async () => {
-        const summary = await campaign.getCampaignSummary();
-        const manager = summary[2];
-        assert.equal(manager, accounts[0]);
+        const res = await campaign.manager();
+        assert.equal(res, accounts[0]);
     });
 
     it("allows person to contribute and mark as contributor", async () => {
@@ -40,68 +46,51 @@ contract("Unit tests", (accounts) => {
             from: accounts[1],
             value: amount,
         });
-        const balance = await campaign.allocationBalanceOf({
-            from: accounts[1],
-        });
+        const balance = await campaign.contributerBalanceOf(accounts[1]);
+
         assert.equal(balance, amount);
     });
 
     it("check that timer is not elapsed", async () => {
-        const summary = await campaign.getFundingSummary();
-        assert(summary[1].gt(new BN(parseInt(Date.now() / 1000))), "timer elapsed");
-    });
+        const res = await campaign.timeout();
 
-    it("buy all remaining tokens", async () => {
-        let summary = await campaign.getFundingSummary();
-        const availableAmount = summary[0]
-            .mul(new BN(web3.utils.toWei("0.001", "ether")))
-            .div(new BN(web3.utils.toWei("1", "ether")));
-
-        await campaign.contribute({
-            from: accounts[2],
-            value: availableAmount,
-        });
-
-        summary = await campaign.getFundingSummary();
-        assert.equal(summary[0], 0);
+        assert.ok(res.toNumber() * 1000 > Date.now(), "timer elapsed");
     });
 
     it("wait for timeout", async () => {
-        await new Promise((r) => setTimeout(r, 15000));
+        await new Promise((r) => setTimeout(r, (TIMEOUT + 5) * 1000));
 
-        const summary = await campaign.getFundingSummary();
-        assert(summary[1].lt(new BN(parseInt(Date.now() / 1000))), "timer not elapsed");
-        assert.equal(summary[0], 0, "disponible tokens left");
+        const res = await campaign.timeout();
+        assert.ok(res.toNumber() * 1000 < Date.now(), "timer not elapsed");
     });
 
     it("finalize funding", async () => {
-        await campaign.finalizeCrowdfunding();
-        const summary = await campaign.getCampaignSummary();
-        const isFunded = summary[6];
+        await factory.finalizeCrowdfunding(campaignAddress);
+        const isFunded = await campaign.isCampaignFunded();
         assert(isFunded);
     });
 
-    it("redeem tokens", async () => {
-        await campaign.redeem({ from: accounts[1] });
-        await campaign.redeem({ from: accounts[2] });
-    });
+    // it("redeem tokens", async () => {
+    //     await campaign.redeem({ from: accounts[1] });
+    //     await campaign.redeem({ from: accounts[2] });
+    // });
 
-    it("make a request", async () => {
-        await campaign.createRequest(
-            "Buy batteries",
-            "Descriptionnnn",
-            web3.utils.toWei("1", "ether"),
-            accounts[1],
-            "5",
-        );
-    });
+    // it("make a request", async () => {
+    //     await campaign.createRequest(
+    //         "Buy batteries",
+    //         "Descriptionnnn",
+    //         web3.utils.toWei("1", "ether"),
+    //         accounts[1],
+    //         "5",
+    //     );
+    // });
 
-    it("vote request", async () => {
-        await campaign.approveRequest(0, { from: accounts[2] });
-    });
+    // it("vote request", async () => {
+    //     await campaign.approveRequest(0, { from: accounts[2] });
+    // });
 
-    it("finalize request", async () => {
-        await new Promise((r) => setTimeout(r, 6000));
-        await campaign.finalizeRequest(0, { from: accounts[2] });
-    });
+    // it("finalize request", async () => {
+    //     await new Promise((r) => setTimeout(r, 6000));
+    //     await campaign.finalizeRequest(0, { from: accounts[2] });
+    // });
 });

@@ -47,14 +47,14 @@ module.exports = {
         //
         development: {
             host: "127.0.0.1", // Localhost (default: none)
-            port: 8545, // Standard Ethereum port (default: none)
+            port: 9545, // Standard Ethereum port (default: none)
             network_id: "*", // Any network (default: none)
         },
-        cronos: {
-            provider: new HDWalletProvider(secret.mnemonic, secret.cronos),
-            network_id: "338",
-            skipDryRun: true,
-        },
+        // cronos: {
+        //     provider: new HDWalletProvider(secret.mnemonic, secret.cronos),
+        //     network_id: "338",
+        //     skipDryRun: true,
+        // },
         ropsten: {
             provider: () => new HDWalletProvider(secret.mnemonic, secret.infura),
             network_id: 3, // Ropsten's id

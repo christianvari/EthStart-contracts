@@ -37,7 +37,7 @@ contract CampaignFactory {
         assert(index < runningCampaigns.length);
 
         Campaign c = Campaign(campaignAddress);
-        assert(c.manager() == msg.sender && block.timestamp > c.timeout());
+        require(c.manager() == msg.sender && block.timestamp > c.timeout());
 
         fundedCampaigns.push(runningCampaigns[index]);
         runningCampaigns[index] = runningCampaigns[runningCampaigns.length - 1];
