@@ -14,7 +14,8 @@ contract Campaign {
 
     uint256 public tokenMaxSupply;
     address public manager;
-    uint256 public endBlock;
+    uint256 public timeout;
+    uint256 public creationTimestamp;
     bool public isCampaignFunded;
 
     address[] contributersAddresses;
@@ -29,11 +30,11 @@ contract Campaign {
     }
 
     modifier beforeTimeout() {
-        assert(block.number <= endBlock);
+        assert(block.timestamp <= timeout);
         _;
     }
     modifier afterTimeout() {
-        assert(block.number > endBlock);
+        assert(block.timestamp > timeout);
         _;
     }
     modifier isCampaignFundedModifier() {
@@ -49,9 +50,9 @@ contract Campaign {
         uint256 _tokenMaxSupply,
         string memory _tokenName,
         string memory _tokenSymbol,
-        uint256 _endBlock
+        uint256 _timeout
     ) {
-        assert(block.number <= _endBlock && _tokenMaxSupply > 0);
+        assert(block.timestamp <= _timeout && _tokenMaxSupply > 0);
 
         initiator = msg.sender;
         title = _title;
@@ -61,7 +62,8 @@ contract Campaign {
         tokenName = _tokenName;
         tokenSymbol = _tokenSymbol;
         manager = _manager;
-        endBlock = _endBlock;
+        timeout = _timeout;
+        creationTimestamp = block.timestamp;
         isCampaignFunded = false;
     }
 
